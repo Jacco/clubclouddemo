@@ -8,13 +8,10 @@ export class BackendStack extends Stack {
 
     const server = new lambda.Function(this, "GraphQL-Server", {
       functionName: 'GraphQL-Server',
-      runtime: lambda.Runtime.NODEJS_12_X,
-      handler: "index.handler",
-      code: lambda.Code.fromInline(`
-        exports.handler = async function (event, context) {
-          console.log(event);
-        };
-      `),
+      runtime: lambda.Runtime.PROVIDED_AL2,
+      code: lambda.Code.fromAsset("../binaries/graphql-server/target/aarch64-unknown-linux-gnu/release/lambda"),
+      handler: 'not.required',
+      architecture: lambda.Architecture.ARM_64
     });
   }
 }
