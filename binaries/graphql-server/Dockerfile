@@ -8,7 +8,7 @@ COPY Cargo.toml Cargo.lock .
 
 RUN cargo build --release --target aarch64-unknown-linux-gnu
 
-COPY src .
+COPY src src
 
 RUN cargo build --release --target aarch64-unknown-linux-gnu
 

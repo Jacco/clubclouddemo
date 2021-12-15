@@ -1,7 +1,7 @@
-use std::borrow::{BorrowMut, Borrow};
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use lambda_runtime::{handler_fn, Error};
+use serde::{Deserialize, Serialize};
 use serde_json::{Value};
 use simple_logger::SimpleLogger;
 use aws_config::meta::region::RegionProviderChain;
@@ -19,7 +19,7 @@ fn author_query(client: &Client) -> aws_sdk_dynamodb::client::fluent_builders::Q
         .expression_attribute_values(":value".to_string(), AttributeValue::S("USER".to_string()))
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Author {
     id: String,
     name: String,
@@ -68,23 +68,33 @@ async fn get_authors(client: &Client) -> HashMap::<String, Author> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    //SimpleLogger::new().with_level(log::LevelFilter::Info).init().unwrap();
     println!("main");
     let now = Instant::now();
-    //SimpleLogger::new().with_level(log::LevelFilter::Info).init().unwrap();
 
     let shared_config = aws_config::load_from_env().await;
     let client = Client::new(&shared_config);
+    let client_ref = &client;
     let author_wait = get_authors(&client);
     let authors = tokio::join!(author_wait); // just as an example
     for (key, value) in &authors.0 {
         println!("{}: {:?}", key, value);
     }
     println!("{}", now.elapsed().as_millis());
-    //let func = handler_fn(my_handler);
-    //lambda_runtime::run(func).await?;
+
+    let handler_func_closure = move |event: Value, ctx: lambda_runtime::Context| async move {
+        let result = my_handler(event, ctx, client_ref).await?;
+        Ok::<Value, Error>(result)
+    };
+
+    let func = handler_fn(handler_func_closure);
+    lambda_runtime::run(func).await?;
     Ok(())
 }
 
-pub(crate) async fn my_handler(event: Value, _ctx: lambda_runtime::Context) -> Result<Value, Error> {
+pub(crate) async fn my_handler(event: Value, _ctx: lambda_runtime::Context, client: &Client) -> Result<Value, Error> {
+    println!("main");
+
+    let authors = get_authors(client).await;
     Ok(event)
 }
